@@ -1,0 +1,48 @@
+### Haskell ###
+dist/
+dist-newstyle/
+cabal.sandbox.config
+cabal.project.local
+*.o
+*.hi
+*.chi
+*.chs.h
+*.dyn_o
+*.dyn_hi
+*.prof
+*.aux
+*.hp
+*.eventlog
+.cache
+*.swp
+*~
+.\#*
+.\#*
+
+### Stack ###
+.stack-work/
+.stack-work-install/
+
+### Cabal ###
+cabal-dev/
+.cabal-sandbox/
+cabal.sandbox.config
+*.cabal~
+cabal.project.local
+cabal.project.local.*
+
+### Tags ###
+tags
+TAGS
+
+### IDE and editors ###
+*.idea/
+.idea/
+*.vscode/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+*.history
+*.settings/
+*.DS_Store
+*.ghc.environment.*
