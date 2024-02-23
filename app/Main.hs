@@ -1,6 +1,6 @@
 import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game
-import System.Random()
+import System.Random (randomR, StdGen, newStdGen)
 
 -- Constants
 windowWidth, windowHeight, cellSize :: Int
@@ -8,6 +8,8 @@ windowWidth = 800
 windowHeight = 600
 cellSize = 20
 dietClock = 5
+widthCells = 40
+heightCells = 30
 
 data Direction = Up | Down | Left | Right deriving (Eq)
 
@@ -25,7 +27,7 @@ initialState :: GameState
 initialState = GameState {
     gameTime = 0,
     snake = [(0, 0)],
-    food = (10, 10),
+    food = (20, 10),
     direction = Main.Right,
     gameOver = False
 }
@@ -52,14 +54,16 @@ handleInput _ gs = gs
 updateGameState :: Float -> GameState -> GameState
 updateGameState time gs
     | gameOver gs = gs
-    | otherwise = if collidedWithWall || collidedWithSnake || starve then gs { gameOver = True } else gs { snake = newDietSnake, gameTime = newDietGameTime}
+    | otherwise = if collidedWithWall || collidedWithSnake || starve then gs { gameOver = True } else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood}
     where
         collidedWithWall = x < 0 || x >= windowWidth `div` cellSize || y < 0 || y >= windowHeight `div` cellSize
         collidedWithSnake = (x, y) `elem` tail (snake gs)
+        didEatFlag = didEat (snake gs) (direction gs) (food gs)
         newSnake = moveSnake (snake gs) (direction gs) (food gs)
         newGameTime = updateGameTime (gameTime gs) time
         newDietSnake = dietSnake newSnake newGameTime
         newDietGameTime = updateDietGameTime newGameTime
+        newFood = updateFood (food gs) didEatFlag
         starve = (snake gs == [])
         (x, y) = head newDietSnake
 
@@ -89,6 +93,17 @@ updateDietGameTime gameTime
     |(gameTime >= dietClock) = gameTime - dietClock
     | otherwise = gameTime
 
+updateFood :: Food -> Bool -> Food
+updateFood (foodx, foody) didEatFlag
+    | didEatFlag = (newX, newY)
+    | otherwise = (foodx, foody)
+    where
+        --gen = newStdGen
+        --newX = randomR (1, widthCells - 1) gen
+        --newY = randomR (1, heightCells - 1) gen
+        newX = foody
+        newY = foodx
+
 moveSnake :: Snake -> Direction -> Food -> Snake
 moveSnake (head:body) dir (foodx, foody) = (newX, newY) : newBody
     where 
@@ -100,8 +115,10 @@ cutSnake [] = []
 cutSnake [last] = [] 
 cutSnake (h:t) = h:(cutSnake t)
 
-didEat :: Snake -> Food -> Bool 
-didEat ((x, y):_) (fx, fy) = x == fx && y == fy
+didEat :: Snake -> Direction -> Food -> Bool 
+didEat (head:body) dir (foodx, foody) = (foodx == newX && foody == newY)
+    where 
+         (newX, newY) = moveSnakehead head dir
 
 -- Entry point
 main :: IO ()
