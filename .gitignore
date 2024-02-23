@@ -46,3 +46,4 @@ TAGS
 *.settings/
 *.DS_Store
 *.ghc.environment.*
+dist-newstyle
