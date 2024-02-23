@@ -17,6 +17,8 @@ data GameState = GameState {
     gameOver :: Bool
 }
 
+type Snake = [(Int, Int)] 
+type Food = (Int, Int)
 initialState :: GameState
 initialState = GameState {
     snake = [(0, 0)],
@@ -28,7 +30,7 @@ initialState = GameState {
 drawGameState :: GameState -> Picture
 drawGameState gs = pictures [boundary, snakePic, foodPic, gameOverPic]
     where
-        snakePic = color green $ pictures $ map drawCell (snake gs)
+        snakePic = color blue $ pictures $ map drawCell (snake gs)
         foodPic = color red $ drawCell (food gs)
         drawCell (x, y) = translate (fromIntegral $ x * cellSize - fromIntegral windowWidth `div` 2 + fromIntegral cellSize `div` 2) 
                           (fromIntegral $ y * cellSize - fromIntegral windowHeight `div` 2 + fromIntegral cellSize `div` 2) 
@@ -51,18 +53,30 @@ updateGameState _ gs
     where
         collidedWithWall = x < 0 || x >= windowWidth `div` cellSize || y < 0 || y >= windowHeight `div` cellSize
         collidedWithSnake = (x, y) `elem` tail (snake gs)
-        newSnake = moveSnake (snake gs) (direction gs)
+        newSnake = moveSnake (snake gs) (direction gs) (food gs)
         (x, y) = head newSnake
 
-moveSnake :: [(Int, Int)] -> Direction -> [(Int, Int)]
-moveSnake ((x, y):xs) dir = case dir of
-    Main.Up    -> (x, y + 1) : moveSnake' xs
-    Main.Down  -> (x, y - 1) : moveSnake' xs
-    Main.Left  -> (x - 1, y) : moveSnake' xs
-    Main.Right -> (x + 1, y) : moveSnake' xs
-    where moveSnake' [] = []
-          moveSnake' [_] = [(x, y)]
-          moveSnake' (x':xs') = x' : moveSnake' xs'
+moveSnakehead :: (Int, Int) -> Direction -> (Int, Int) 
+moveSnakehead (x,y) dir = 
+	case dir of
+	    Main.Up    -> (x, y + 1)
+	    Main.Down  -> (x, y - 1) 
+	    Main.Left  -> (x - 1, y)
+	    Main.Right -> (x + 1, y)
+
+moveSnake :: Snake -> Direction -> Food -> Snake
+moveSnake (head:body) dir (foodx, foody) = (newX, newY) : newBody
+    where 
+         (newX, newY) = moveSnakehead head dir
+    	 newBody = if (foodx == newX && foody == newY) then (newX, newY):(cutSnake $ head:body) else (newX, newY):cutSnake body
+
+cutSnake :: Snake -> Snake 
+cutSnake [] = [] 
+cutSnake [last] = [] 
+cutSnake (h:t) = h:(cutSnake t)
+
+didEat :: Snake -> Food -> Bool 
+didEat ((x, y):_) (fx, fy) = x == fx && y == fy
 
 -- Entry point
 main :: IO ()
@@ -75,3 +89,5 @@ main = do
         drawGameState
         handleInput
         updateGameState
+
+
