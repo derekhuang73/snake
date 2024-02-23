@@ -7,6 +7,7 @@ windowWidth, windowHeight, cellSize :: Int
 windowWidth = 800
 windowHeight = 600
 cellSize = 20
+dietClock = 5
 
 data Direction = Up | Down | Left | Right deriving (Eq)
 
@@ -80,12 +81,12 @@ removeLastCell (x:xs) = x : removeLastCell xs
 
 dietSnake :: Snake -> Float -> Snake
 dietSnake snake gameTime 
-    |(gameTime >= 10) = removeLastCell snake
+    |(gameTime >= dietClock) = removeLastCell snake
     | otherwise = snake
 
 updateDietGameTime :: Float -> Float
 updateDietGameTime gameTime
-    |(gameTime >= 10) = gameTime - 10
+    |(gameTime >= dietClock) = gameTime - dietClock
     | otherwise = gameTime
 
 moveSnake :: Snake -> Direction -> Food -> Snake
