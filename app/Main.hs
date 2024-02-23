@@ -11,6 +11,7 @@ cellSize = 20
 data Direction = Up | Down | Left | Right deriving (Eq)
 
 data GameState = GameState {
+    gameTime :: Float,
     snake :: [(Int, Int)],
     food :: (Int, Int),
     direction :: Direction,
@@ -21,6 +22,7 @@ type Snake = [(Int, Int)]
 type Food = (Int, Int)
 initialState :: GameState
 initialState = GameState {
+    gameTime = 0,
     snake = [(0, 0)],
     food = (10, 10),
     direction = Main.Right,
@@ -47,14 +49,18 @@ handleInput (EventKey (SpecialKey KeyRight) Graphics.Gloss.Interface.Pure.Game.D
 handleInput _ gs = gs
 
 updateGameState :: Float -> GameState -> GameState
-updateGameState _ gs
+updateGameState time gs
     | gameOver gs = gs
-    | otherwise = if collidedWithWall || collidedWithSnake then gs { gameOver = True } else gs { snake = newSnake }
+    | otherwise = if collidedWithWall || collidedWithSnake || starve then gs { gameOver = True } else gs { snake = newDietSnake, gameTime = newDietGameTime}
     where
         collidedWithWall = x < 0 || x >= windowWidth `div` cellSize || y < 0 || y >= windowHeight `div` cellSize
         collidedWithSnake = (x, y) `elem` tail (snake gs)
         newSnake = moveSnake (snake gs) (direction gs) (food gs)
-        (x, y) = head newSnake
+        newGameTime = updateGameTime (gameTime gs) time
+        newDietSnake = dietSnake newSnake newGameTime
+        newDietGameTime = updateDietGameTime newGameTime
+        starve = (snake gs == [])
+        (x, y) = head newDietSnake
 
 moveSnakehead :: (Int, Int) -> Direction -> (Int, Int) 
 moveSnakehead (x,y) dir = 
@@ -63,6 +69,24 @@ moveSnakehead (x,y) dir =
 	    Main.Down  -> (x, y - 1) 
 	    Main.Left  -> (x - 1, y)
 	    Main.Right -> (x + 1, y)
+
+updateGameTime :: Float -> Float -> Float
+updateGameTime gameTime time = gameTime + time
+
+removeLastCell :: Snake -> Snake
+removeLastCell [] = []
+removeLastCell [_] = []
+removeLastCell (x:xs) = x : removeLastCell xs
+
+dietSnake :: Snake -> Float -> Snake
+dietSnake snake gameTime 
+    |(gameTime >= 10) = removeLastCell snake
+    | otherwise = snake
+
+updateDietGameTime :: Float -> Float
+updateDietGameTime gameTime
+    |(gameTime >= 10) = gameTime - 10
+    | otherwise = gameTime
 
 moveSnake :: Snake -> Direction -> Food -> Snake
 moveSnake (head:body) dir (foodx, foody) = (newX, newY) : newBody
