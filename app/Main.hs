@@ -26,14 +26,18 @@ initialState = GameState {
 }
 
 drawGameState :: GameState -> Picture
-drawGameState gs = pictures [snakePic, foodPic, gameOverPic]
+drawGameState gs = pictures [boundary, snakePic, foodPic, gameOverPic]
     where
         snakePic = color green $ pictures $ map drawCell (snake gs)
         foodPic = color red $ drawCell (food gs)
-        drawCell (x, y) = translate (fromIntegral $ x * cellSize) (fromIntegral $ y * cellSize) $ rectangleSolid (fromIntegral cellSize) (fromIntegral cellSize)
+        drawCell (x, y) = translate (fromIntegral $ x * cellSize - fromIntegral windowWidth `div` 2 + fromIntegral cellSize `div` 2) 
+                          (fromIntegral $ y * cellSize - fromIntegral windowHeight `div` 2 + fromIntegral cellSize `div` 2) 
+                          $ rectangleSolid (fromIntegral cellSize) (fromIntegral cellSize)
         gameOverPic = if gameOver gs then translate (-200) 0 $ scale 0.3 0.3 $ color (dark red) $ text "Game Over" else blank
+        boundary = color black $ rectangleWire (fromIntegral windowWidth) (fromIntegral windowHeight)
 
 handleInput :: Event -> GameState -> GameState
+handleInput (EventKey (Char 'r') Graphics.Gloss.Interface.Pure.Game.Down _ _) gs = initialState
 handleInput (EventKey (SpecialKey KeyUp) Graphics.Gloss.Interface.Pure.Game.Down _ _) gs = if direction gs /= Main.Down then gs { direction = Main.Up } else gs
 handleInput (EventKey (SpecialKey KeyDown) Graphics.Gloss.Interface.Pure.Game.Down _ _) gs = if direction gs /= Main.Up then gs { direction = Main.Down } else gs
 handleInput (EventKey (SpecialKey KeyLeft) Graphics.Gloss.Interface.Pure.Game.Down _ _) gs = if direction gs /= Main.Right then gs { direction = Main.Left } else gs
@@ -45,7 +49,7 @@ updateGameState _ gs
     | gameOver gs = gs
     | otherwise = if collidedWithWall || collidedWithSnake then gs { gameOver = True } else gs { snake = newSnake }
     where
-        collidedWithWall = x < 0 || x >= windowWidth || y < 0 || y >= windowHeight
+        collidedWithWall = x < 0 || x >= windowWidth `div` cellSize || y < 0 || y >= windowHeight `div` cellSize
         collidedWithSnake = (x, y) `elem` tail (snake gs)
         newSnake = moveSnake (snake gs) (direction gs)
         (x, y) = head newSnake
