@@ -1,6 +1,7 @@
 ### Haskell ###
 dist/
 dist-newstyle/
+dist-newstyle/cache/
 cabal.sandbox.config
 cabal.project.local
 *.o
