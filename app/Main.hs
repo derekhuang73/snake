@@ -20,7 +20,8 @@ data GameState = GameState {
     direction :: Direction,
     ai :: Snake,
     aiDirection :: Direction,
-    gameOver :: Bool
+    gameOver :: Bool,
+    score :: Int
 }
 
 type Snake = [(Int, Int)] 
@@ -28,7 +29,7 @@ type Food = (Int, Int)
 initialState :: GameState
 initialState = GameState {
     gameTime = 0,
-    snake = [(0, 0)],
+    snake = [(10, 10)],
     food = (20, 10),
     direction = Main.Right,
     ai = [(35,25),(35,26),(35,27)],
@@ -38,7 +39,7 @@ initialState = GameState {
 }
 
 drawGameState :: GameState -> Picture
-drawGameState gs = pictures [boundary, snakePic, aiPic, foodPic, gameOverPic]
+drawGameState gs = pictures [boundary, snakePic, aiPic, foodPic, gameOverPic, scorePic]
     where
         snakePic = color blue $ pictures $ map drawCell (snake gs)
         aiPic = color black $ pictures $ map drawCell (ai gs)
@@ -68,7 +69,7 @@ updateGameState time gs
     | gameOver gs = gs
     | otherwise = if collidedWithWall || collidedWithSnake || starve then gs { gameOver = True } else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newAI2, aiDirection=newAIDir}
     where
-        collidedWithWall = x < 0 || x >= windowWidth `div` cellSize || y < 0 || y >= windowHeight `div` cellSize
+        collidedWithWall = x < 2 || x >= windowWidth `div` cellSize - 2 || y < 2 || y >= windowHeight `div` cellSize - 2
         collidedWithSnake = (x, y) `elem` tail (snake gs)
         didEatFlag = didEat (snake gs) (direction gs) (food gs) || didEat (ai gs) (aiDirection gs) (food gs)
 
