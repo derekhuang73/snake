@@ -35,7 +35,8 @@ initialState = GameState {
     direction = Main.Right,
     ai = [(35,25),(35,26),(35,27)],
     aiDirection = Main.Down,
-    gameOver = False
+    gameOver = False,
+    score = 0
 }
 
 drawGameState :: GameState -> Picture
@@ -46,11 +47,7 @@ drawGameState gs = pictures [boundary, snakePic, aiPic, foodPic, gameOverPic, sc
         foodPic = color red $ drawCell (food gs)
         drawCell (x, y) = translate (fromIntegral $ x * cellSize - fromIntegral windowWidth `div` 2 + fromIntegral cellSize `div` 2) 
                           (fromIntegral $ y * cellSize - fromIntegral windowHeight `div` 2 + fromIntegral cellSize `div` 2) 
-                          $ circleSolid (fromIntegral cellSize / 2)
-        drawSnake (x, y) = translate (fromIntegral $ x * cellSize - fromIntegral windowWidth `div` 2 + fromIntegral cellSize `div` 2) 
-                          (fromIntegral $ y * cellSize - fromIntegral windowHeight `div` 2 + fromIntegral cellSize `div` 2) 
-                          $ pictures [color (white) $ rectangleWire (fromIntegral cellSize) (fromIntegral cellSize), 
-                          color (blue) $ rectangleSolid (fromIntegral cellSize - 1) (fromIntegral cellSize - 1)]
+                          $ rectangleSolid (fromIntegral cellSize - 1) (fromIntegral cellSize - 1)
         gameOverPic = if gameOver gs then pictures [translate (-200) 0 $ scale 0.5 0.5 $ color (dark red) $ text "Game Over", translate (-150) (-50) $ scale 0.2 0.2 $ color (dark red) $ text "Press R to Restart"] else blank
         boundary = color black $ rectangleWire (fromIntegral $ windowWidth - 4 * cellSize) (fromIntegral $ windowHeight - 4 * cellSize)
         scorePic = translate (-fromIntegral windowWidth / 2 + 20) (fromIntegral windowHeight / 2 - 20) 
