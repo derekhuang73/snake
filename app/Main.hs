@@ -67,7 +67,7 @@ handleInput _ gs = gs
 updateGameState :: Float -> GameState -> GameState
 updateGameState time gs
     | gameOver gs = gs
-    | otherwise = if collidedWithWall || collidedWithSnake || starve then gs { gameOver = True } else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newAI2, aiDirection=newAIDir}
+    | otherwise = if collidedWithWall || collidedWithSnake || starve then gs { gameOver = True } else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newAI2, aiDirection=newAIDir, score = newScore}
     where
         collidedWithWall = x < 2 || x >= windowWidth `div` cellSize - 2 || y < 2 || y >= windowHeight `div` cellSize - 2
         collidedWithSnake = (x, y) `elem` tail (snake gs)
@@ -84,6 +84,7 @@ updateGameState time gs
         newFood = updateFood (food gs) didEatFlag
         starve = (snake gs == [])
         (x, y) = if length newDietSnake == 0 then (0,0) else head newDietSnake
+        newScore = if didEatFlag then score gs + 1 else score gs
 
 -- Move snake's head only
 moveSnakehead :: (Int, Int) -> Direction -> (Int, Int) 
