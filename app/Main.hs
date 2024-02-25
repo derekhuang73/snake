@@ -20,7 +20,8 @@ data GameState = GameState {
     direction :: Direction,
     ai :: Snake,
     aiDirection :: Direction,
-    gameOver :: Bool
+    gameOver :: Bool,
+    score :: Int
 }
 
 type Snake = [(Int, Int)] 
@@ -28,25 +29,30 @@ type Food = (Int, Int)
 initialState :: GameState
 initialState = GameState {
     gameTime = 0,
-    snake = [(0, 0)],
+    snake = [(10, 10)],
     food = (20, 10),
     direction = Main.Right,
     ai = [(35,25),(35,26),(35,27)],
     aiDirection = Main.Down,
-    gameOver = False
+    gameOver = False,
+    score = 0
 }
 
 drawGameState :: GameState -> Picture
-drawGameState gs = pictures [boundary, snakePic, aiPic, foodPic, gameOverPic]
+drawGameState gs = pictures [boundary, snakePic, aiPic, foodPic, gameOverPic, scorePic]
     where
         snakePic = color blue $ pictures $ map drawCell (snake gs)
         aiPic = color black $ pictures $ map drawCell (ai gs)
         foodPic = color red $ drawCell (food gs)
         drawCell (x, y) = translate (fromIntegral $ x * cellSize - fromIntegral windowWidth `div` 2 + fromIntegral cellSize `div` 2) 
                           (fromIntegral $ y * cellSize - fromIntegral windowHeight `div` 2 + fromIntegral cellSize `div` 2) 
-                          $ rectangleSolid (fromIntegral cellSize) (fromIntegral cellSize)
-        gameOverPic = if gameOver gs then translate (-200) 0 $ scale 0.3 0.3 $ color (dark red) $ text "Game Over" else blank
-        boundary = color black $ rectangleWire (fromIntegral windowWidth) (fromIntegral windowHeight)
+                          $ rectangleSolid (fromIntegral cellSize - 1) (fromIntegral cellSize - 1)
+        gameOverPic = if gameOver gs then pictures [translate (-200) 0 $ scale 0.5 0.5 $ color (dark red) $ text "Game Over", translate (-150) (-50) $ scale 0.2 0.2 $ color (dark red) $ text "Press R to Restart"] else blank
+        boundary = color black $ rectangleWire (fromIntegral $ windowWidth - 4 * cellSize) (fromIntegral $ windowHeight - 4 * cellSize)
+        scorePic = translate (-fromIntegral windowWidth / 2 + 20) (fromIntegral windowHeight / 2 - 20) 
+                   $ scale 0.2 0.2 
+                   $ color black 
+                   $ text ("Score: " ++ show (score gs))
 
 -- Event Handlers 
 handleInput :: Event -> GameState -> GameState
@@ -63,7 +69,7 @@ updateGameState time gs
     | gameOver gs = gs
     | otherwise = if collidedWithWall || collidedWithSnake || starve then gs { gameOver = True } else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newAI2, aiDirection=newAIDir}
     where
-        collidedWithWall = x < 0 || x >= windowWidth `div` cellSize || y < 0 || y >= windowHeight `div` cellSize
+        collidedWithWall = x < 2 || x >= windowWidth `div` cellSize - 2 || y < 2 || y >= windowHeight `div` cellSize - 2
         collidedWithSnake = (x, y) `elem` tail (snake gs)
         didEatFlag = didEat (snake gs) (direction gs) (food gs) || didEat (ai gs) (aiDirection gs) (food gs)
 
