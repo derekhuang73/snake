@@ -29,7 +29,7 @@ type Food = (Int, Int)
 initialState :: GameState
 initialState = GameState {
     gameTime = 0,
-    snake = [(10, 10)],
+    snake = [(10, 10), (9, 10), (8, 10)],
     food = (20, 10),
     direction = Main.Right,
     ai = [(35,25),(35,26),(35,27)],
@@ -71,7 +71,7 @@ updateGameState time gs
       -- || collidedWithSnake 
       || starve then gs { gameOver = True, snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newDietAI, aiDirection=newAIDir, score = newScore} else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newDietAI, aiDirection=newAIDir, score = newScore}
     where
-        collidedWithWall = x < 2 || x >= windowWidth `div` cellSize - 2 || y < 2 || y >= windowHeight `div` cellSize - 2
+        collidedWithWall = x < 3 || x >= windowWidth `div` cellSize - 3 || y < 3 || y >= windowHeight `div` cellSize - 3
         -- collidedWithSnake = (x, y) `elem` tail (snake gs)
         didEatFlag = didEat (snake gs) (direction gs) (food gs)
         
