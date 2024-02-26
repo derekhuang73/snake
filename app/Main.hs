@@ -29,7 +29,7 @@ type Food = (Int, Int)
 initialState :: GameState
 initialState = GameState {
     gameTime = 0,
-    snake = [(10, 10)],
+    snake = [(10, 10), (9, 10), (8, 10)],
     food = (20, 10),
     direction = Main.Right,
     ai = [(35,25),(35,26),(35,27)],
@@ -67,22 +67,32 @@ handleInput _ gs = gs
 updateGameState :: Float -> GameState -> GameState
 updateGameState time gs
     | gameOver gs = gs
-    | otherwise = if collidedWithWall || collidedWithSnake || starve then gs { gameOver = True } else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newAI2, aiDirection=newAIDir, score = newScore}
+    | otherwise = if collidedWithWall 
+      -- || collidedWithSnake 
+      || starve then gs { gameOver = True, snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newDietAI, aiDirection=newAIDir, score = newScore} else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newDietAI, aiDirection=newAIDir, score = newScore}
     where
-        collidedWithWall = x < 2 || x >= windowWidth `div` cellSize - 2 || y < 2 || y >= windowHeight `div` cellSize - 2
-        collidedWithSnake = (x, y) `elem` tail (snake gs)
-        didEatFlag = didEat (snake gs) (direction gs) (food gs) || didEat (ai gs) (aiDirection gs) (food gs)
+        collidedWithWall = x < 3 || x >= windowWidth `div` cellSize - 3 || y < 3 || y >= windowHeight `div` cellSize - 3
+        -- collidedWithSnake = (x, y) `elem` tail (snake gs)
+        didEatFlag = didEat (snake gs) (direction gs) (food gs)
+        
+        --Update both snake
+        (newAI1, newAIDir) = updateAI (ai gs) (aiDirection gs) (snake gs) (food gs)
+        newSnake1 = moveSnake (snake gs) (direction gs) (food gs)
 
-        (movedAI, newAIDir) = updateAI (ai gs) (aiDirection gs) (snake gs) (food gs)
-        (newAI, gameSnake) = collide movedAI (snake gs) newAIDir
-        movedSnake = moveSnake gameSnake (direction gs) (food gs)
-        (newSnake, newAI2) = collide movedSnake newAI (direction gs)
+        --consider did eat with updated dir
+        didAiEatFlag = didEat (ai gs) newAIDir (food gs)
+       
+        --remove parts if collides with the updated position
+        (newSnake2, newAI2) = collide newSnake1 newAI1
+        (newAI3, newSnake3) = collide newAI2 newSnake2
          
         newGameTime = updateGameTime (gameTime gs) time
-        newDietSnake = dietSnake newSnake newGameTime
+        newDietSnake = dietSnake newSnake3 newGameTime
+        newDietAI = dietSnake newAI3 newGameTime
         newDietGameTime = updateDietGameTime newGameTime
-        newFood = updateFood (food gs) didEatFlag
-        starve = (snake gs == [])
+
+        newFood = updateFood (food gs) (didEatFlag || didAiEatFlag)
+        starve = (newAI2 == [] || newDietSnake == [])
         (x, y) = if length newDietSnake == 0 then (0,0) else head newDietSnake
         newScore = if didEatFlag then score gs + 1 else score gs
 
@@ -119,11 +129,8 @@ updateDietGameTime ts
 -- Update food to next position
 updateFood :: Food -> Bool -> Food
 updateFood (foodx, foody) didEatFlag
-    | didEatFlag = (newX, newY)
+    | didEatFlag = (foody, foodx)
     | otherwise = (foodx, foody)
-    where
-        newX = foody
-        newY = foodx
 
 -- Move snake into the next positions, accounting for all changes like eating food 
 moveSnake :: Snake -> Direction -> Food -> Snake
@@ -200,36 +207,18 @@ cartesianMainDir currDir (x1,y1) (x2,y2)
               then if currDir == Main.Left then currDir else Main.Right -- food is right
               else if currDir == Main.Right then currDir else Main.Left -- food is left
 
-collide :: Snake -> Snake -> Direction -> (Snake, Snake)
-collide ours (theirsHead:theirsTail) oursDir = 
-  if count == 0 then (ours, theirs) else (grow (head ours) ours oursDir, theirs)
-    where 
-    (count, rest) = cutSnake (head ours) theirsTail
-    theirs = (theirsHead: rest)
-  -- (grow (head ours) ours oursDir, afterCut)
-  -- where 
-  --   afterCut = cutSnake (head ours) theirs 
-  --   
-cutSnake :: (Int, Int) -> Snake -> (Int, Snake)
-cutSnake _ [] = (0,[])
-cutSnake (x,y) ((x1,y1):b) = 
-  case x1 == x && y1 == y of 
-    True -> (length b, [])
-    False -> (c, (x1,y1):l)
-      where 
-       (c, l) = cutSnake (x,y) b
-
-grow :: (Int,Int) -> Snake -> Direction -> Snake
-grow (x,y) [] dir = ((x,y):[b1,b2,b3]) where
-  oppositeDir = case dir of
-      Main.Up    ->  Main.Down
-      Main.Down  ->  Main.Up
-      Main.Left  ->  Main.Right
-      Main.Right ->  Main.Left 
-  b1 = moveSnakehead (x,y) oppositeDir
-  b2 = moveSnakehead b1 oppositeDir
-  b3 = moveSnakehead b2 oppositeDir
-grow _ (h:b) dir = (h:grow h b dir)
+collide :: Snake -> Snake -> (Snake, Snake)
+collide [] []  = ([],[])
+collide snake1 []  = (snake1, [])
+collide [] snake2  = ([], snake2)
+collide snake1 snake2
+    | (fst snake1head == fst snake2head) && (snd snake1head == snd snake2head) = (snake1, [])
+    | otherwise = (snake1, snake2head:newSnake2)
+    where
+        snake2head = head snake2
+        snake2tail = tail snake2 
+        snake1head = head snake1
+        newSnake2 = snd (collide snake1 snake2tail)
   
 
 -- Entry point
