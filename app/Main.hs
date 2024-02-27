@@ -15,7 +15,7 @@ dietClock = 5
 type Snake = [(Int, Int)] 
 type Food = (Int, Int)
 
--- Actions
+-- Define Direction
 data Direction = Up | Down | Left | Right deriving (Eq)
 
 -- Game State
