@@ -11,12 +11,18 @@ cellSize = 20
 dietClock :: Float
 dietClock = 5
 
+-- Snake and Food
+type Snake = [(Int, Int)] 
+type Food = (Int, Int)
+
+-- Actions
 data Direction = Up | Down | Left | Right deriving (Eq)
 
+-- Game State
 data GameState = GameState {
     gameTime :: Float,
-    snake :: [(Int, Int)],
-    food :: (Int, Int),
+    snake :: Snake,
+    food :: Food,
     direction :: Direction,
     ai :: Snake,
     aiDirection :: Direction,
@@ -24,20 +30,20 @@ data GameState = GameState {
     score :: Int
 }
 
-type Snake = [(Int, Int)] 
-type Food = (Int, Int)
+-- Initial GameState
 initialState :: GameState
 initialState = GameState {
     gameTime = 0,
-    snake = [(10, 10), (9, 10), (8, 10)],
+    snake = [(10, 10)],
     food = (20, 10),
     direction = Main.Right,
-    ai = [(35,25),(35,26),(35,27)],
+    ai = [(35,25)],
     aiDirection = Main.Down,
     gameOver = False,
     score = 0
 }
 
+-- Drawing the game state
 drawGameState :: GameState -> Picture
 drawGameState gs = pictures [boundary, snakePic, aiPic, foodPic, gameOverPic, scorePic]
     where
