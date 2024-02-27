@@ -68,7 +68,6 @@ updateGameState :: Float -> GameState -> GameState
 updateGameState time gs
     | gameOver gs = gs
     | otherwise = if collidedWithWall 
-      -- || collidedWithSnake 
       || starve then gs { gameOver = True, snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newDietAI, aiDirection=newAIDir, score = newScore} else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newDietAI, aiDirection=newAIDir, score = newScore}
     where
         collidedWithWall = x < 3 || x >= windowWidth `div` cellSize - 3 || y < 3 || y >= windowHeight `div` cellSize - 3
@@ -85,12 +84,14 @@ updateGameState time gs
         --remove parts if collides with the updated position
         (newSnake2, newAI2) = collide newSnake1 newAI1
         (newAI3, newSnake3) = collide newAI2 newSnake2
-         
+        
+        -- calculate diet timer
         newGameTime = updateGameTime (gameTime gs) time
         newDietSnake = dietSnake newSnake3 newGameTime
         newDietAI = dietSnake newAI3 newGameTime
         newDietGameTime = updateDietGameTime newGameTime
-
+        
+        -- render new food and starve settings
         newFood = updateFood (food gs) (didEatFlag || didAiEatFlag)
         starve = (newAI2 == [] || newDietSnake == [])
         (x, y) = if length newDietSnake == 0 then (0,0) else head newDietSnake
@@ -147,22 +148,22 @@ didEat (h:_) dir (foodx, foody) = (foodx == newX && foody == newY)
     where 
          (newX, newY) = moveSnakehead h dir
 
-
 {- 
  - AI Implementation 
- - AI snake will ALWAYS take the optmized path to take the food
- - 
+ - AI snake will take the optmized path to either take the food, or
+ - try to collide with the user snake
  - NOTE: Both snakes can eat each other's body
  - -}
 updateAI :: Snake -> Direction -> Snake -> Food -> (Snake, Direction)
 updateAI aiSnake aidir player target = 
-  if dist2player * 2 > dist2food 
+  if dist2player * 3 > dist2food 
     then (moveSnake aiSnake dir2food target, dir2food)
     else (moveSnake aiSnake dir2player target, dir2player)
       where 
       (dist2player, dir2player) =  optimizeOverPlayer aiSnake aidir player
       (dist2food, dir2food) = optimizeOverFood aiSnake aidir target
 
+-- AI algorithm: calculate distance and direction to collide with player
 optimizeOverPlayer :: Snake -> Direction -> Snake -> (Int, Direction)
 optimizeOverPlayer [] aidir _ = (10000, aidir)
 optimizeOverPlayer _ aidir [] = (10000, aidir)
@@ -172,7 +173,7 @@ optimizeOverPlayer (aiHead:_) aidir (_:player) = (optDist, optDir)
     optDist = cartesianDist aiHead target
     optDir = cartesianMainDir aidir aiHead target
   
-
+-- AI algorithm: calculate distance and direction to take the food
 optimizeOverFood :: Snake -> Direction -> Food -> (Int, Direction)
 optimizeOverFood [] aidir _ = (0, aidir)
 optimizeOverFood (aiHead:_) aidir target = (optDist, optDir)
@@ -207,6 +208,7 @@ cartesianMainDir currDir (x1,y1) (x2,y2)
               then if currDir == Main.Left then currDir else Main.Right -- food is right
               else if currDir == Main.Right then currDir else Main.Left -- food is left
 
+-- Collision logic for two snakes colliding each other
 collide :: Snake -> Snake -> (Snake, Snake)
 collide [] []  = ([],[])
 collide snake1 []  = (snake1, [])
@@ -219,7 +221,6 @@ collide snake1 snake2
         snake2tail = tail snake2 
         snake1head = head snake1
         newSnake2 = snd (collide snake1 snake2tail)
-  
 
 -- Entry point
 main :: IO ()
