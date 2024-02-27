@@ -11,12 +11,18 @@ cellSize = 20
 dietClock :: Float
 dietClock = 5
 
+-- Snake and Food
+type Snake = [(Int, Int)] 
+type Food = (Int, Int)
+
+-- Define Direction
 data Direction = Up | Down | Left | Right deriving (Eq)
 
+-- Game State
 data GameState = GameState {
     gameTime :: Float,
-    snake :: [(Int, Int)],
-    food :: (Int, Int),
+    snake :: Snake,
+    food :: Food,
     direction :: Direction,
     ai :: Snake,
     aiDirection :: Direction,
@@ -24,35 +30,37 @@ data GameState = GameState {
     score :: Int
 }
 
-type Snake = [(Int, Int)] 
-type Food = (Int, Int)
+-- Initial GameState
 initialState :: GameState
 initialState = GameState {
     gameTime = 0,
-    snake = [(10, 10), (9, 10), (8, 10)],
+    snake = [(10, 10)],
     food = (20, 10),
     direction = Main.Right,
-    ai = [(35,25),(35,26),(35,27)],
+    ai = [(35,25)],
     aiDirection = Main.Down,
     gameOver = False,
     score = 0
 }
 
+-- Drawing the game state
 drawGameState :: GameState -> Picture
 drawGameState gs = pictures [boundary, snakePic, aiPic, foodPic, gameOverPic, scorePic]
-    where
-        snakePic = color blue $ pictures $ map drawCell (snake gs)
-        aiPic = color black $ pictures $ map drawCell (ai gs)
-        foodPic = color red $ drawCell (food gs)
-        drawCell (x, y) = translate (fromIntegral $ x * cellSize - fromIntegral windowWidth `div` 2 + fromIntegral cellSize `div` 2) 
-                          (fromIntegral $ y * cellSize - fromIntegral windowHeight `div` 2 + fromIntegral cellSize `div` 2) 
-                          $ rectangleSolid (fromIntegral cellSize - 1) (fromIntegral cellSize - 1)
-        gameOverPic = if gameOver gs then pictures [translate (-200) 0 $ scale 0.5 0.5 $ color (dark red) $ text "Game Over", translate (-150) (-50) $ scale 0.2 0.2 $ color (dark red) $ text "Press R to Restart"] else blank
-        boundary = color black $ rectangleWire (fromIntegral $ windowWidth - 4 * cellSize) (fromIntegral $ windowHeight - 4 * cellSize)
-        scorePic = translate (-fromIntegral windowWidth / 2 + 20) (fromIntegral windowHeight / 2 - 20) 
-                   $ scale 0.2 0.2 
-                   $ color black 
-                   $ text ("Score: " ++ show (score gs))
+  where
+    snakePic = color blue $ pictures $ map drawCell (snake gs)
+    aiPic = color black $ pictures $ map drawCell (ai gs)
+    foodPic = color red $ drawCell (food gs)
+    drawCell (x, y) = translate (fromIntegral $ x * cellSize - fromIntegral windowWidth `div` 2 + fromIntegral cellSize `div` 2) 
+              (fromIntegral $ y * cellSize - fromIntegral windowHeight `div` 2 + fromIntegral cellSize `div` 2) 
+              $ rectangleSolid (fromIntegral cellSize - 1) (fromIntegral cellSize - 1)
+    gameOverPic = if gameOver gs 
+                    then pictures [translate (-200) 0 $ scale 0.5 0.5 $ color (dark red) $ text "Game Over", translate (-150) (-50) $ scale 0.2 0.2 $ color (dark red) $ text "Press R to Restart"] 
+                    else blank
+    boundary = color black $ rectangleWire (fromIntegral $ windowWidth - 4 * cellSize) (fromIntegral $ windowHeight - 4 * cellSize)
+    scorePic = translate (-fromIntegral windowWidth / 2 + 20) (fromIntegral windowHeight / 2 - 20) 
+           $ scale 0.2 0.2 
+           $ color black 
+           $ text ("Score: " ++ show (score gs))
 
 -- Event Handlers 
 handleInput :: Event -> GameState -> GameState
@@ -66,36 +74,37 @@ handleInput _ gs = gs
 -- Update the main game state. All state changes are applied here. 
 updateGameState :: Float -> GameState -> GameState
 updateGameState time gs
-    | gameOver gs = gs
-    | otherwise = if collidedWithWall 
-      || starve then gs { gameOver = True, snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newDietAI, aiDirection=newAIDir, score = newScore} else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai=newDietAI, aiDirection=newAIDir, score = newScore}
-    where
-        collidedWithWall = x < 3 || x >= windowWidth `div` cellSize - 3 || y < 3 || y >= windowHeight `div` cellSize - 3
-        -- collidedWithSnake = (x, y) `elem` tail (snake gs)
-        didEatFlag = didEat (snake gs) (direction gs) (food gs)
-        
-        --Update both snake
-        (newAI1, newAIDir) = updateAI (ai gs) (aiDirection gs) (snake gs) (food gs)
-        newSnake1 = moveSnake (snake gs) (direction gs) (food gs)
+  | gameOver gs = gs
+  | otherwise = if collidedWithWall || starve
+                  then gs { gameOver = True, snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai = newDietAI, aiDirection = newAIDir, score = newScore }
+                  else gs { snake = newDietSnake, gameTime = newDietGameTime, food = newFood, ai = newDietAI, aiDirection = newAIDir, score = newScore }
+  where
+    collidedWithWall = x < 3 || x >= windowWidth `div` cellSize - 3 || y < 3 || y >= windowHeight `div` cellSize - 3
+    -- collidedWithSnake = (x, y) `elem` tail (snake gs)
+    didEatFlag = didEat (snake gs) (direction gs) (food gs)
+    
+    -- Update both snake
+    (newAI1, newAIDir) = updateAI (ai gs) (aiDirection gs) (snake gs) (food gs)
+    newSnake1 = moveSnake (snake gs) (direction gs) (food gs)
 
-        --consider did eat with updated dir
-        didAiEatFlag = didEat (ai gs) newAIDir (food gs)
-       
-        --remove parts if collides with the updated position
-        (newSnake2, newAI2) = collide newSnake1 newAI1
-        (newAI3, newSnake3) = collide newAI2 newSnake2
-        
-        -- calculate diet timer
-        newGameTime = updateGameTime (gameTime gs) time
-        newDietSnake = dietSnake newSnake3 newGameTime
-        newDietAI = dietSnake newAI3 newGameTime
-        newDietGameTime = updateDietGameTime newGameTime
-        
-        -- render new food and starve settings
-        newFood = updateFood (food gs) (didEatFlag || didAiEatFlag)
-        starve = (newAI2 == [] || newDietSnake == [])
-        (x, y) = if length newDietSnake == 0 then (0,0) else head newDietSnake
-        newScore = if didEatFlag then score gs + 1 else score gs
+    -- Consider did eat with updated dir
+    didAiEatFlag = didEat (ai gs) newAIDir (food gs)
+     
+    -- Remove parts if collides with the updated position
+    (newSnake2, newAI2) = collide newSnake1 newAI1
+    (newAI3, newSnake3) = collide newAI2 newSnake2
+    
+    -- Calculate diet timer
+    newGameTime = updateGameTime (gameTime gs) time
+    newDietSnake = dietSnake newSnake3 newGameTime
+    newDietAI = dietSnake newAI3 newGameTime
+    newDietGameTime = updateDietGameTime newGameTime
+    
+    -- Render new food and starve settings
+    newFood = updateFood (food gs) (didEatFlag || didAiEatFlag)
+    starve = (newAI2 == [] || newDietSnake == [])
+    (x, y) = if length newDietSnake == 0 then (0,0) else head newDietSnake
+    newScore = if didEatFlag then score gs + 1 else score gs
 
 -- Move snake's head only
 moveSnakehead :: (Int, Int) -> Direction -> (Int, Int) 
@@ -106,6 +115,7 @@ moveSnakehead (x,y) dir =
     Main.Left  -> (x - 1, y)
     Main.Right -> (x + 1, y)
 
+-- Update game time
 updateGameTime :: Float -> Float -> Float
 updateGameTime ts time = ts + time
 
@@ -137,16 +147,18 @@ updateFood (foodx, foody) didEatFlag
 moveSnake :: Snake -> Direction -> Food -> Snake
 moveSnake [] _ (_,_) = []
 moveSnake (h:body) dir (foodx, foody) = (newX, newY) : newBody
-    where 
-      (newX, newY) = moveSnakehead h dir
-      newBody = if (foodx == newX && foody == newY) then (newX, newY):(removeLastCell $ h:body) else (newX, newY):removeLastCell body
+  where 
+    (newX, newY) = moveSnakehead h dir
+    newBody = if (foodx == newX && foody == newY)
+                then (newX, newY) : (removeLastCell $ h:body)
+                else (newX, newY) : removeLastCell body
 
 -- Checks whether the next movement of snake is eating 
 didEat :: Snake -> Direction -> Food -> Bool 
 didEat [] _ (_,_) = False
 didEat (h:_) dir (foodx, foody) = (foodx == newX && foody == newY)
-    where 
-         (newX, newY) = moveSnakehead h dir
+  where 
+    (newX, newY) = moveSnakehead h dir
 
 {- 
  - AI Implementation 
@@ -159,9 +171,9 @@ updateAI aiSnake aidir player target =
   if dist2player * 3 > dist2food 
     then (moveSnake aiSnake dir2food target, dir2food)
     else (moveSnake aiSnake dir2player target, dir2player)
-      where 
-      (dist2player, dir2player) =  optimizeOverPlayer aiSnake aidir player
-      (dist2food, dir2food) = optimizeOverFood aiSnake aidir target
+  where 
+    (dist2player, dir2player) = optimizeOverPlayer aiSnake aidir player
+    (dist2food, dir2food) = optimizeOverFood aiSnake aidir target
 
 -- AI algorithm: calculate distance and direction to collide with player
 optimizeOverPlayer :: Snake -> Direction -> Snake -> (Int, Direction)
@@ -194,19 +206,19 @@ cartesianMainDir currDir (x1,y1) (x2,y2)
   | x1 == x2 = 
     if y1 < y2 
       then if currDir == Main.Down then Main.Left else Main.Up -- food is up
-      else if currDir == Main.Up then Main.Right else Main.Up-- food is down
+      else if currDir == Main.Up then Main.Right else Main.Up -- food is down
   | y1 == y2 = 
     if x1 < x2 
       then if currDir == Main.Left then Main.Up else Main.Right -- food is right
       else if currDir == Main.Right then Main.Up else Main.Left -- food is left
   | otherwise = 
     if y1 < y2 
-              then if currDir == Main.Down then xdir else Main.Up -- food is up
-              else if currDir == Main.Up then xdir else Main.Down -- food is down
+      then if currDir == Main.Down then xdir else Main.Up -- food is up
+      else if currDir == Main.Up then xdir else Main.Down -- food is down
     where  
-     xdir = if x1 < x2 
-              then if currDir == Main.Left then currDir else Main.Right -- food is right
-              else if currDir == Main.Right then currDir else Main.Left -- food is left
+      xdir = if x1 < x2 
+               then if currDir == Main.Left then currDir else Main.Right -- food is right
+               else if currDir == Main.Right then currDir else Main.Left -- food is left
 
 -- Collision logic for two snakes colliding each other
 collide :: Snake -> Snake -> (Snake, Snake)
